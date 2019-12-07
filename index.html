@@ -110,22 +110,22 @@
     const rect = (grid, x, y, width, height) =>
       grid.map((cells, row) =>
         cells.map((cell, col) => {
-          if ((row == y || row == y + height) && col > x && col < x + width) {
+          if ((row == y || row == y + height - 1) && col > x && col < x + width - 1) {
             return new Cell('═')
           }
-          if ((col == x || col == x + width) && row > y && row < y + height) {
+          if ((col == x || col == x + width - 1) && row > y && row < y + height - 1) {
             return new Cell('║')
           }
           if (col == x && row == y) {
             return new Cell('╔')
           }
-          if (col == x && row == y + height) {
+          if (col == x && row == y + height - 1) {
             return new Cell('╚')
           }
-          if (col == x + width && row == y) {
+          if (col == x + width -1  && row == y) {
             return new Cell('╗')
           }
-          if (col == x + width && row == y + height) {
+          if (col == x + width - 1 && row == y + height - 1) {
             return new Cell('╝')
           }
           return cell
@@ -150,7 +150,7 @@
 
       const [rectX, rectY, rectWidth, rectHeight] = cols > 60 ?
         [Math.floor(cols / 4), Math.floor(rows / 8), Math.floor(cols / 2), Math.floor(rows / 2)] :
-        [0, Math.floor(rows / 8), cols - 1, Math.floor(rows / 2)]
+        [0 + 3, Math.floor(rows / 8), cols - 3 - 3, Math.floor(rows / 2)]
       const initGrid = rect(text(emptyGrid(cols, rows), "П", 0, 0), rectX, rectY, rectWidth, rectHeight)
       const grid = gridWithCursor(initGrid, cursorCol, cursorRow)
       root.innerHTML = gridHTML(grid, cellWidth, cellHeight)
