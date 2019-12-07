@@ -16,7 +16,7 @@
     * {
       margin: 0;
       padding: 0;
-      font-family: monospace;
+      font-family: 'Courier New', Courier, monospace;
     }
 
     .grid {
@@ -45,9 +45,7 @@
     // DATA
 
     class Cell {
-      constructor(col, row, char = ' ', fgColor = 'green', bgColor = 'black') {
-        this.col = col
-        this.row = row
+      constructor(char = ' ', { fgColor = 'green', bgColor = 'black' } = {}) {
         this.char = char
         this.bgColor = bgColor
         this.fgColor = fgColor
@@ -59,32 +57,29 @@
     }
 
     const emptyGrid = (cols, rows) =>
-      Array(rows).fill().map((_, row) =>
-        Array(cols).fill().map((_, col) =>
-          new Cell(col, row, ' ')))
-
-    const gridString = (grid) => 
-      grid.map((cells, row) => cells.map((cell, col) => cell.char).join('')).join('\n')
+      Array(rows).fill().map(_ =>
+        Array(cols).fill().map(_ =>
+          new Cell()))
 
     const gridWithCursor = (grid, cursorCol, cursorRow) =>
       grid.map((cells, row) => cells.map((cell, col) =>
         col == cursorCol && row == cursorRow ?
-          new Cell(col, row, cell.char, cell.fgColor, 'gray') :
+          new Cell(cell.char, { fgColor: cell.fgColor, bgColor: 'gray' }) :
           cell))
 
 
     // RENDER 
 
-    const renderCell = (cell, width, height) => `
+    const cellHTML = (cell, row, col, width, height) => `
       <div class="cell" style="
           background-color: ${cell.bgColor}; 
           color: ${cell.fgColor}; 
-          top: ${height * cell.row}px;
-          left: ${width * cell.col}px;
-          width: ${width * cell.char.length}px;
+          top: ${height * row}px;
+          left: ${width * col}px;
+          width: ${width}px;
           height: ${height}px">
         ${cell.char}
-      </div>`
+      </div>`.replace(/(\r\n|\n|\r)/g, '').replace(/\s+/g, ' ')
 
     const cellSize = (root) => {
       const span = document.createElement('span')
@@ -96,19 +91,13 @@
       return size
     }
 
-    const inspect = (fn) => {
-      debugger
-      return fn()
-    }
-
-    const renderGrid = (grid, root, cellWidth, cellHeight) => {
-      root.innerHTML = grid.map((row) => 
-        row.map(cell => 
+    const gridHTML = (grid, cellWidth, cellHeight) =>
+      grid.map((cells, row) =>
+        cells.map((cell, col) =>
           cell.isTransperent() ?
             '' :
-            renderCell(cell, cellWidth, cellHeight)
-      )).map(_ => _.join('')).join('')
-    }
+            cellHTML(cell, row, col, cellWidth, cellHeight)
+        )).map(_ => _.join('')).join('')
 
     const mouseXYToColRow = (x, y, cellWidth, cellHeight) => [
       Math.floor(x / cellWidth),
@@ -119,32 +108,33 @@
     const root = document.getElementsByClassName('grid')[0]
 
     const rect = (grid, x, y, width, height) =>
-      grid.map((cells, row) => cells.map((cell, col) => {
-        if ((row == y || row == y + height) && col > x && col < x + width) {
-          return new Cell(col, row, '═')
-        }
-        if ((col == x || col == x + width) && row > y && row < y + height) {
-          return new Cell(col, row, '║')
-        }
-        if (col == x && row == y) {
-          return new Cell(col, row, '╔')
-        }
-        if (col == x && row == y + height) {
-          return new Cell(col, row, '╚')
-        }
-        if (col == x + width && row == y) {
-          return new Cell(col, row, '╗')
-        }
-        if (col == x + width && row == y + height) {
-          return new Cell(col, row, '╝')
-        }
-        return cell
-      }))
+      grid.map((cells, row) =>
+        cells.map((cell, col) => {
+          if ((row == y || row == y + height) && col > x && col < x + width) {
+            return new Cell('═')
+          }
+          if ((col == x || col == x + width) && row > y && row < y + height) {
+            return new Cell('║')
+          }
+          if (col == x && row == y) {
+            return new Cell('╔')
+          }
+          if (col == x && row == y + height) {
+            return new Cell('╚')
+          }
+          if (col == x + width && row == y) {
+            return new Cell('╗')
+          }
+          if (col == x + width && row == y + height) {
+            return new Cell('╝')
+          }
+          return cell
+        }))
 
     const text = (grid, text, x, y) =>
       grid.map((cells, row) => cells.map((cell, col) =>
         (x == col && row == y) ?
-          new Cell(col, row, text, 'yellow') :
+          new Cell(text, {fgColor:'yellow'}) :
           cell
       ))
 
@@ -163,8 +153,7 @@
         [0, Math.floor(rows / 8), cols - 1, Math.floor(rows / 2)]
       const initGrid = rect(text(emptyGrid(cols, rows), "П", 0, 0), rectX, rectY, rectWidth, rectHeight)
       const grid = gridWithCursor(initGrid, cursorCol, cursorRow)
-      console.log(gridString(grid))
-      renderGrid(grid, root, cellWidth, cellHeight)
+      root.innerHTML = gridHTML(grid, cellWidth, cellHeight)
     }
 
     root.addEventListener('mousemove', e => {
