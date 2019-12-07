@@ -1,6 +1,180 @@
 <!doctype html>
 <html>
-  <body>
-    <p>It works</p>
-  </body>
+
+<head>
+  <meta charsset="utf-8">
+  <title></title>
+  <meta name="description" content="">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <link rel="manifest" href="site.webmanifest">
+  <link rel="apple-touch-icon" href="icon.png">
+  <!-- Place favicon.ico in the root directory -->
+
+  <meta name="theme-color" content="#fafafa">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      font-family: monospace;
+    }
+
+    .grid {
+      position: absolute;
+      display: block;
+      left: 0;
+      right: 0;
+      top: 0;
+      bottom: 0;
+      background: black;
+      cursor: none;
+    }
+
+    .cell {
+      color: green;
+      position: absolute;
+      font-size: 24px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="grid"></div>
+  <script>
+
+    // DATA
+
+    class Cell {
+      constructor(col, row, char = ' ', fgColor = 'green', bgColor = 'black') {
+        this.col = col
+        this.row = row
+        this.char = char
+        this.bgColor = bgColor
+        this.fgColor = fgColor
+      }
+
+      isTransperent() {
+        return this.bgColor == 'black' && this.char == ' '
+      }
+    }
+
+    const emptyGrid = (cols, rows) =>
+      Array(rows).fill().map((_, row) =>
+        Array(cols).fill().map((_, col) =>
+          new Cell(col, row, ' ')))
+
+    const gridString = (grid) => 
+      grid.map((cells, row) => cells.map((cell, col) => cell.char).join('')).join('\n')
+
+    const gridWithCursor = (grid, cursorCol, cursorRow) =>
+      grid.map((cells, row) => cells.map((cell, col) =>
+        col == cursorCol && row == cursorRow ?
+          new Cell(col, row, 'X', 'gray', 'gray') :
+          cell))
+
+
+    // RENDER 
+
+    const renderCell = (cell, width, height) =>
+      `<div class="cell" style="` +
+      `background-color: ${cell.bgColor}; color: ${cell.fgColor}; top: ${height * cell.row + 'px'};` +
+      `left: ${width * cell.col + 'px'}; width: ${width * cell.char.length + 'px'}">` +
+      `${cell.char}` +
+      `</div>\n`
+
+    const cellSize = (root) => {
+      const span = document.createElement('span')
+      span.className = 'cell'
+      span.innerHTML = 'X'
+      root.appendChild(span)
+      const size = [span.offsetWidth, span.offsetHeight]
+      span.remove()
+      return size
+    }
+
+    const inspect = (fn) => {
+      debugger
+      return fn()
+    }
+
+    const renderGrid = (grid, root, cellWidth, cellHeight) => {
+      root.innerHTML = grid.map((row) => 
+        row.map(cell => 
+          cell.isTransperent() ?
+            '' :
+            renderCell(cell, cellWidth, cellHeight)
+      )).map(_ => _.join('')).join('')
+    }
+
+    const mouseXYToColRow = (x, y, cellWidth, cellHeight) => [
+      Math.floor(x / cellWidth),
+      Math.floor(y / cellHeight)
+    ]
+
+    // DEFINE
+    const root = document.getElementsByClassName('grid')[0]
+
+    const rect = (grid, x, y, width, height) =>
+      grid.map((cells, row) => cells.map((cell, col) => {
+        if ((row == y || row == y + height) && col > x && col < x + width) {
+          return new Cell(col, row, '═')
+        }
+        if ((col == x || col == x + width) && row > y && row < y + height) {
+          return new Cell(col, row, '║')
+        }
+        if (col == x && row == y) {
+          return new Cell(col, row, '╔')
+        }
+        if (col == x && row == y + height) {
+          return new Cell(col, row, '╚')
+        }
+        if (col == x + width && row == y) {
+          return new Cell(col, row, '╗')
+        }
+        if (col == x + width && row == y + height) {
+          return new Cell(col, row, '╝')
+        }
+        return cell
+      }))
+
+    const text = (grid, text, x, y) =>
+      grid.map((cells, row) => cells.map((cell, col) =>
+        (x == col && row == y) ?
+          new Cell(col, row, text, 'yellow') :
+          cell
+      ))
+
+    // MAIN
+    const [cellWidth, cellHeight] = cellSize(root)
+    let cursorCol, cursorRow
+    const render = () => {
+
+      const [cols, rows] = [
+        Math.floor(Math.max(document.documentElement.clientWidth, window.innerWidth || 0) / cellWidth),
+        Math.floor(Math.max(document.documentElement.clientHeight, window.innerHeight || 0) / cellHeight)
+      ]
+
+      const [rectX, rectY, rectWidth, rectHeight] = cols > 60 ?
+        [Math.floor(cols / 4), Math.floor(rows / 8), Math.floor(cols / 2), Math.floor(rows / 2)] :
+        [0, Math.floor(rows / 8), cols - 1, Math.floor(rows / 2)]
+      const initGrid = rect(text(emptyGrid(cols, rows), "П", 0, 0), rectX, rectY, rectWidth, rectHeight)
+      const grid = gridWithCursor(initGrid, cursorCol, cursorRow)
+      console.log(gridString(grid))
+      renderGrid(grid, root, cellWidth, cellHeight)
+    }
+
+    root.addEventListener('mousemove', e => {
+      [cursorCol, cursorRow] = mouseXYToColRow(e.clientX, e.clientY, cellWidth, cellHeight)
+      render()
+    });
+
+    window.addEventListener('resize', e => {
+      render()
+    });
+
+    render()
+
+  </script>
+</body>
+
 </html>
