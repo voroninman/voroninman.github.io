@@ -33,7 +33,7 @@
     .cell {
       color: green;
       position: absolute;
-      font-size: 24px;
+      font-size: 1rem;
     }
   </style>
 </head>
@@ -42,50 +42,18 @@
   <div class="grid"></div>
   <script>
 
-    // DATA
+    const Cell = (char = ' ', { fgColor = 'green', bgColor = 'black' } = {}) => ({
+      char,
+      fgColor,
+      bgColor,
+      isTransperent: () => bgColor == 'black' && char == ' '
+    })
 
-    class Cell {
-      constructor(char = ' ', { fgColor = 'green', bgColor = 'black' } = {}) {
-        this.char = char
-        this.bgColor = bgColor
-        this.fgColor = fgColor
-      }
-
-      isTransperent() {
-        return this.bgColor == 'black' && this.char == ' '
-      }
-    }
-
-    const emptyGrid = (cols, rows) =>
-      Array(rows).fill().map(_ =>
-        Array(cols).fill().map(_ =>
-          new Cell()))
-
-    const gridWithCursor = (grid, cursorCol, cursorRow) =>
-      grid.map((cells, row) => cells.map((cell, col) =>
-        col == cursorCol && row == cursorRow ?
-          new Cell(cell.char, { fgColor: cell.fgColor, bgColor: 'gray' }) :
-          cell))
-
-
-    // RENDER 
-
-    const cellHTML = (cell, row, col, width, height) => `
-      <div class="cell" style="
-          background-color: ${cell.bgColor}; 
-          color: ${cell.fgColor}; 
-          top: ${height * row}px;
-          left: ${width * col}px;
-          width: ${width}px;
-          height: ${height}px">
-        ${cell.char}
-      </div>`.replace(/(\r\n|\n|\r)/g, '').replace(/\s+/g, ' ')
-
-    const cellSize = (root) => {
+    const cellSize = () => {
       const span = document.createElement('span')
       span.className = 'cell'
       span.innerHTML = 'X'
-      root.appendChild(span)
+      document.getElementsByTagName('body')[0].appendChild(span)
       const size = [span.offsetWidth, span.offsetHeight]
       span.remove()
       return size
@@ -96,7 +64,15 @@
         cells.map((cell, col) =>
           cell.isTransperent() ?
             '' :
-            cellHTML(cell, row, col, cellWidth, cellHeight)
+            `<div class="cell" style="
+              background-color: ${cell.bgColor}; 
+              color: ${cell.fgColor}; 
+              top: ${cellHeight * row}px;
+              left: ${cellWidth * col}px;
+              width: ${cellWidth * cell.char.length}px;
+              height: ${cellHeight}px">
+            ${cell.char}
+          </div>`.replace(/(\r\n|\n|\r)/g, '').replace(/\s+/g, ' ')
         )).map(_ => _.join('')).join('')
 
     const mouseXYToColRow = (x, y, cellWidth, cellHeight) => [
@@ -104,45 +80,53 @@
       Math.floor(y / cellHeight)
     ]
 
-    // DEFINE
-    const root = document.getElementsByClassName('grid')[0]
+    const Grid = window.Grid2 = (cols, rows) => ({
+      grid: Array(rows).fill().map(_ => Array(cols).fill().map(_ => Cell())),
+      text(chars, firstCharRow, firstCharCol) {
+        this.grid = this.grid.map((cells, row) => cells.map((cell, col) =>
+          (firstCharRow == row && firstCharCol == col) ?
+            Cell(chars, { fgColor: 'yellow' }) :
+            cell))
+        return this
+      },
+      cursor(row, col) {
+        this.grid = this.grid.map((cells, row) => cells.map((cell, col) =>
+          col == cursorCol && row == cursorRow ?
+            Cell(cell.char, { fgColor: cell.fgColor, bgColor: 'gray' }) :
+            cell))
+        return this
+      },
+      rect(topLeftRow, topLeftCol, width, height) {
+        this.grid = this.grid.map((cells, row) =>
+          cells.map((cell, col) => {
+            if ((row == topLeftRow || row == topLeftRow + height - 1) && col > topLeftCol && col < topLeftCol + width - 1) {
+              return Cell('═')
+            }
+            if ((col == topLeftCol || col == topLeftCol + width - 1) && row > topLeftRow && row < topLeftRow + height - 1) {
+              return Cell('║')
+            }
+            if (col == topLeftCol && row == topLeftRow) {
+              return Cell('╔')
+            }
+            if (col == topLeftCol && row == topLeftRow + height - 1) {
+              return Cell('╚')
+            }
+            if (col == topLeftCol + width - 1 && row == topLeftRow) {
+              return Cell('╗')
+            }
+            if (col == topLeftCol + width - 1 && row == topLeftRow + height - 1) {
+              return Cell('╝')
+            }
+            return cell
+          }))
+        return this
+      }
+    })
 
-    const rect = (grid, x, y, width, height) =>
-      grid.map((cells, row) =>
-        cells.map((cell, col) => {
-          if ((row == y || row == y + height - 1) && col > x && col < x + width - 1) {
-            return new Cell('═')
-          }
-          if ((col == x || col == x + width - 1) && row > y && row < y + height - 1) {
-            return new Cell('║')
-          }
-          if (col == x && row == y) {
-            return new Cell('╔')
-          }
-          if (col == x && row == y + height - 1) {
-            return new Cell('╚')
-          }
-          if (col == x + width -1  && row == y) {
-            return new Cell('╗')
-          }
-          if (col == x + width - 1 && row == y + height - 1) {
-            return new Cell('╝')
-          }
-          return cell
-        }))
-
-    const text = (grid, text, x, y) =>
-      grid.map((cells, row) => cells.map((cell, col) =>
-        (x == col && row == y) ?
-          new Cell(text, {fgColor:'yellow'}) :
-          cell
-      ))
-
-    // MAIN
-    const [cellWidth, cellHeight] = cellSize(root)
+    const [cellWidth, cellHeight] = cellSize()
     let cursorCol, cursorRow
+    const root = document.getElementsByClassName('grid')[0]
     const render = () => {
-
       const [cols, rows] = [
         Math.floor(Math.max(document.documentElement.clientWidth, window.innerWidth || 0) / cellWidth),
         Math.floor(Math.max(document.documentElement.clientHeight, window.innerHeight || 0) / cellHeight)
@@ -151,8 +135,14 @@
       const [rectX, rectY, rectWidth, rectHeight] = cols > 60 ?
         [Math.floor(cols / 4), Math.floor(rows / 8), Math.floor(cols / 2), Math.floor(rows / 2)] :
         [0 + 3, Math.floor(rows / 8), cols - 3 - 3, Math.floor(rows / 2)]
-      const initGrid = rect(text(emptyGrid(cols, rows), "П", 0, 0), rectX, rectY, rectWidth, rectHeight)
-      const grid = gridWithCursor(initGrid, cursorCol, cursorRow)
+
+      const grid = window.grid = Grid(cols, rows)
+        .rect(rectY, rectX, rectWidth, rectHeight)
+        .text("Welcome stranger.", rectY + 1, rectX + 1)
+        .text("https://www.linkedin.com/in/viktorvoronin/", rectY + 2, rectX + 1)
+        .cursor(cursorCol, cursorRow)
+        .grid
+
       root.innerHTML = gridHTML(grid, cellWidth, cellHeight)
     }
 
