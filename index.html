@@ -17,6 +17,7 @@
       margin: 0;
       padding: 0;
       font-family: 'Courier New', Courier, monospace;
+      /* font-weight: normal; */
     }
 
     .grid {
@@ -26,7 +27,7 @@
       right: 0;
       top: 0;
       bottom: 0;
-      background: black;
+      background: darkblue;
       cursor: none;
     }
 
@@ -42,37 +43,51 @@
   <div class="grid"></div>
   <script>
 
-    const Cell = (char = ' ', { fgColor = 'green', bgColor = 'black' } = {}) => ({
+    const Cell = (char = ' ', { fgColor = 'green', bgColor = 'blue' } = {}) => ({
       char,
       fgColor,
       bgColor,
-      isTransperent: () => bgColor == 'black' && char == ' '
+      isTransperent: () => bgColor == 'blue' && char == ' '
     })
 
-    const cellSize = () => {
+    const getCellSize = () => {
       const span = document.createElement('span')
       span.className = 'cell'
       span.innerHTML = 'X'
       document.getElementsByTagName('body')[0].appendChild(span)
-      const size = [span.offsetWidth, span.offsetHeight]
+      const [width, height] = [span.offsetWidth, span.offsetHeight]
       span.remove()
-      return size
+      return [width, height]
     }
+
+    const setCellSize = (width, height) => {
+      const css = document.createElement("style");
+      css.type = "text/css";
+      css.innerHTML = `.cell { width : ${width}px; height: ${height}px }`;
+      document.body.appendChild(css);
+    }
+
+    const reduceCells = (cells) =>
+      cells.reduce((prev, curr, currIdx, cells) => {
+        
+      })
 
     const gridHTML = (grid, cellWidth, cellHeight) =>
       grid.map((cells, row) =>
         cells.map((cell, col) =>
           cell.isTransperent() ?
             '' :
-            `<div class="cell" style="
-              background-color: ${cell.bgColor}; 
-              color: ${cell.fgColor}; 
-              top: ${cellHeight * row}px;
-              left: ${cellWidth * col}px;
-              width: ${cellWidth * cell.char.length}px;
-              height: ${cellHeight}px">
-            ${cell.char}
-          </div>`.replace(/(\r\n|\n|\r)/g, '').replace(/\s+/g, ' ')
+            [
+              `<div class="cell" style="`,
+              `background-color: ${cell.bgColor};`,
+              `color: ${cell.fgColor};`,
+              `top: ${cellHeight * row}px;`,
+              `left: ${cellWidth * col}px;`,
+              cell.char.length > 1 ? `width: ${cellWidth * cell.char.length}px;` : '',
+              `">`,
+              `${cell.char}`,
+              `</div>`,
+            ].join('')
         )).map(_ => _.join('')).join('')
 
     const mouseXYToColRow = (x, y, cellWidth, cellHeight) => [
@@ -80,8 +95,23 @@
       Math.floor(y / cellHeight)
     ]
 
+    const colorToInvertedHex = (name) => {
+      d = document.createElement("div");
+      d.style.color = name;
+      document.body.appendChild(d)
+      const rgb = window.getComputedStyle(d).color.split(/\)|,|\(/).slice(1, 4).map(_ => parseInt(_, 10))
+      d.remove()
+      const invertedRgb = [255 - rgb[0], 255 - rgb[1], 255 - rgb[2]]
+      return '#' + invertedRgb
+        .map(_ => _.toString(16))
+        .map(hex => hex.length === 1 ? '0' + hex : hex)
+        .join('')
+    }
+
     const Grid = window.Grid2 = (cols, rows) => ({
+
       grid: Array(rows).fill().map(_ => Array(cols).fill().map(_ => Cell())),
+
       text(chars, firstCharRow, firstCharCol) {
         this.grid = this.grid.map((cells, row) => cells.map((cell, col) =>
           (firstCharRow == row && firstCharCol == col) ?
@@ -89,41 +119,64 @@
             cell))
         return this
       },
+
       cursor(row, col) {
         this.grid = this.grid.map((cells, row) => cells.map((cell, col) =>
           col == cursorCol && row == cursorRow ?
-            Cell(cell.char, { fgColor: cell.fgColor, bgColor: 'gray' }) :
+            Cell(cell.char, { 
+              fgColor: colorToInvertedHex(cell.fgColor), 
+              bgColor: colorToInvertedHex(cell.bgColor) }) :
             cell))
         return this
       },
-      rect(topLeftRow, topLeftCol, width, height) {
+
+      rect(topLeftRow, topLeftCol, width, height, { title, bgColor, borderColor, titleColor, shadowColor = 'black'} = {}) {
         this.grid = this.grid.map((cells, row) =>
           cells.map((cell, col) => {
-            if ((row == topLeftRow || row == topLeftRow + height - 1) && col > topLeftCol && col < topLeftCol + width - 1) {
-              return Cell('═')
-            }
-            if ((col == topLeftCol || col == topLeftCol + width - 1) && row > topLeftRow && row < topLeftRow + height - 1) {
-              return Cell('║')
-            }
-            if (col == topLeftCol && row == topLeftRow) {
-              return Cell('╔')
-            }
-            if (col == topLeftCol && row == topLeftRow + height - 1) {
-              return Cell('╚')
-            }
-            if (col == topLeftCol + width - 1 && row == topLeftRow) {
-              return Cell('╗')
-            }
-            if (col == topLeftCol + width - 1 && row == topLeftRow + height - 1) {
-              return Cell('╝')
-            }
-            return cell
+            const [rRow, rCol] = [row - topLeftRow, col - topLeftCol]
+            if (rRow < 0 || rCol < 0 || rRow > height + 1 || rCol > width + 1) return cell
+            const titleFirstCharCol = Math.floor(width / 2 - title.length / 2)
+            const borderOptions = { bgColor, fgColor: borderColor }
+            return [
+              // Title
+              [title && rRow == 0 && rCol == titleFirstCharCol - 2, Cell('┤', borderOptions)],
+              [title && rRow == 0 && rCol == titleFirstCharCol + title.length + 1, Cell('├', borderOptions)],
+              [title && rRow == 0
+                && rCol >= titleFirstCharCol - 1
+                && rCol <= titleFirstCharCol + title.length + 1,
+              Cell(title.slice(
+                rCol - titleFirstCharCol,
+                rCol - titleFirstCharCol + 1),
+                { fgColor: titleColor, bgColor })],
+
+              // Top
+              [rRow == 0 && rCol == 0, Cell('┌', borderOptions)],
+              [rRow == 0 && rCol > 0 && rCol < width, Cell('─', borderOptions)],
+              [rRow == 0 && rCol == width, Cell('┐', borderOptions)],
+
+              // Bottom
+              [rRow == height && rCol == 0, Cell('└', borderOptions)],
+              [rRow == height && rCol > 0 && rCol < width, Cell('─', borderOptions)],
+              [rRow == height && rCol == width, Cell('┘', borderOptions)],
+
+              // Sides
+              [(rCol == 0 || rCol == width) && rRow < height  , Cell('│', borderOptions)],
+
+              // Shadow
+              [rRow == 0 && rCol == width + 1, Cell()],
+              [rRow == height + 1 && rCol == 0, Cell()],
+              [rRow == height + 1, Cell(' ', {bgColor: shadowColor})],
+              [rCol == width + 1, Cell(' ', {bgColor: shadowColor})],
+
+              [true, Cell(cell.char, { fgColor: cell.fgColor, bgColor })]
+            ].find(([cond, ..._]) => cond)[1]
           }))
         return this
       }
     })
 
-    const [cellWidth, cellHeight] = cellSize()
+    const [cellWidth, cellHeight] = getCellSize()
+    setCellSize(cellWidth, cellHeight)
     let cursorCol, cursorRow
     const root = document.getElementsByClassName('grid')[0]
     const render = () => {
@@ -137,9 +190,13 @@
         [0 + 3, Math.floor(rows / 8), cols - 3 - 3, Math.floor(rows / 2)]
 
       const grid = window.grid = Grid(cols, rows)
-        .rect(rectY, rectX, rectWidth, rectHeight)
-        .text("Welcome stranger.", rectY + 1, rectX + 1)
-        .text("https://www.linkedin.com/in/viktorvoronin/", rectY + 2, rectX + 1)
+        .rect(rectY, rectX, rectWidth, rectHeight, {
+          title: 'Greetings curious beautiful human',
+          bgColor: 'darkgray',
+          borderColor: 'black',
+          titleColor: 'darkred',
+          shadowColor: 'blue'
+        })
         .cursor(cursorCol, cursorRow)
         .grid
 
