@@ -17,7 +17,6 @@
       margin: 0;
       padding: 0;
       font-family: 'Courier New', Courier, monospace;
-      /* font-weight: normal; */
     }
 
     .grid {
@@ -35,6 +34,7 @@
       color: green;
       position: absolute;
       font-size: 1rem;
+      letter-spacing: 0.395px; // TODO: Explain magic number.
     }
   </style>
 </head>
@@ -42,12 +42,13 @@
 <body>
   <div class="grid"></div>
   <script>
-
     const Cell = (char = ' ', { fgColor = 'green', bgColor = 'blue' } = {}) => ({
       char,
       fgColor,
       bgColor,
-      isTransperent: () => bgColor == 'blue' && char == ' '
+      equals: (other) => char == other.char && fgColor == other.fgColor && bgColor == other.bgColor,
+      isTransperent: () => bgColor == 'blue' && !char.replace(/\s+/g, ''),
+      includes: (other) => other.equals(Cell(char.slice(-1)[0], { fgColor, bgColor }))
     })
 
     const getCellSize = () => {
@@ -67,15 +68,32 @@
       document.body.appendChild(css);
     }
 
-    const reduceCells = (cells) =>
-      cells.reduce((prev, curr, currIdx, cells) => {
-        
-      })
+    const lastNotNull = (arr) => {
+      let i = arr.length
+      while (i-- && !arr[i]) { }
+      return arr[i]
+    }
+
+    const bgCell = Cell(' ', { fgColor: 'green', bgColor: 'blue' })
+
+    const rowReducer = (newRow, currentCell) => {
+      if (!currentCell || currentCell.equals(bgCell)) {
+        return [...newRow, null]
+      }
+      const lastCell = lastNotNull(newRow)
+
+      if (lastCell && currentCell && lastCell.includes(currentCell)) {
+        lastCell.char += currentCell.char
+        return [...newRow, null]
+      }
+
+      return [...newRow, currentCell]
+    }
 
     const gridHTML = (grid, cellWidth, cellHeight) =>
       grid.map((cells, row) =>
-        cells.map((cell, col) =>
-          cell.isTransperent() ?
+        cells.reduce(rowReducer, []).map((cell, col) =>
+          !cell || cell.isTransperent() ?
             '' :
             [
               `<div class="cell" style="`,
@@ -95,7 +113,22 @@
       Math.floor(y / cellHeight)
     ]
 
-    const colorToInvertedHex = (name) => {
+
+    const memo = (f) => {
+      var cache = {}
+      return (...args) => {
+        const key = JSON.stringify(args)
+        if (cache[key]) {
+          return cache[key]
+        }
+
+        const val = f(...args)
+        cache[key] = val
+        return val
+      }
+    }
+
+    const colorToInvertedHex = memo((name) => {
       d = document.createElement("div");
       d.style.color = name;
       document.body.appendChild(d)
@@ -106,7 +139,11 @@
         .map(_ => _.toString(16))
         .map(hex => hex.length === 1 ? '0' + hex : hex)
         .join('')
-    }
+    })
+
+    const ifthen = (pairs) => pairs.find(_ => _[0])[1]()
+
+
 
     const Grid = window.Grid2 = (cols, rows) => ({
 
@@ -123,53 +160,56 @@
       cursor(row, col) {
         this.grid = this.grid.map((cells, row) => cells.map((cell, col) =>
           col == cursorCol && row == cursorRow ?
-            Cell(cell.char, { 
-              fgColor: colorToInvertedHex(cell.fgColor), 
-              bgColor: colorToInvertedHex(cell.bgColor) }) :
+            Cell(cell.char, {
+              fgColor: colorToInvertedHex(cell.fgColor),
+              bgColor: colorToInvertedHex(cell.bgColor)
+            }) :
             cell))
         return this
       },
 
-      rect(topLeftRow, topLeftCol, width, height, { title, bgColor, borderColor, titleColor, shadowColor = 'black'} = {}) {
+      rect(topLeftRow, topLeftCol, width, height, { title, bgColor, borderColor, titleColor, shadowColor = 'black' } = {}) {
         this.grid = this.grid.map((cells, row) =>
           cells.map((cell, col) => {
             const [rRow, rCol] = [row - topLeftRow, col - topLeftCol]
             if (rRow < 0 || rCol < 0 || rRow > height + 1 || rCol > width + 1) return cell
             const titleFirstCharCol = Math.floor(width / 2 - title.length / 2)
             const borderOptions = { bgColor, fgColor: borderColor }
-            return [
+            return ifthen([
               // Title
-              [title && rRow == 0 && rCol == titleFirstCharCol - 2, Cell('┤', borderOptions)],
-              [title && rRow == 0 && rCol == titleFirstCharCol + title.length + 1, Cell('├', borderOptions)],
+              [title && rRow == 0 && rCol == titleFirstCharCol - 2, 
+                () => Cell('┤', borderOptions)],
+              [title && rRow == 0 && rCol == titleFirstCharCol + title.length + 1, 
+                () => Cell('├', borderOptions)],
               [title && rRow == 0
                 && rCol >= titleFirstCharCol - 1
                 && rCol <= titleFirstCharCol + title.length + 1,
-              Cell(title.slice(
+              () => Cell(title.slice(
                 rCol - titleFirstCharCol,
                 rCol - titleFirstCharCol + 1),
                 { fgColor: titleColor, bgColor })],
 
               // Top
-              [rRow == 0 && rCol == 0, Cell('┌', borderOptions)],
-              [rRow == 0 && rCol > 0 && rCol < width, Cell('─', borderOptions)],
-              [rRow == 0 && rCol == width, Cell('┐', borderOptions)],
+              [rRow == 0 && rCol == 0, () => Cell('┌', borderOptions)],
+              [rRow == 0 && rCol > 0 && rCol < width, () => Cell('─', borderOptions)],
+              [rRow == 0 && rCol == width, () => Cell('┐', borderOptions)],
 
               // Bottom
-              [rRow == height && rCol == 0, Cell('└', borderOptions)],
-              [rRow == height && rCol > 0 && rCol < width, Cell('─', borderOptions)],
-              [rRow == height && rCol == width, Cell('┘', borderOptions)],
+              [rRow == height && rCol == 0, () => Cell('└', borderOptions)],
+              [rRow == height && rCol > 0 && rCol < width, () => Cell('─', borderOptions)],
+              [rRow == height && rCol == width, () => Cell('┘', borderOptions)],
 
               // Sides
-              [(rCol == 0 || rCol == width) && rRow < height  , Cell('│', borderOptions)],
+              [(rCol == 0 || rCol == width) && rRow < height, () => Cell('│', borderOptions)],
 
               // Shadow
-              [rRow == 0 && rCol == width + 1, Cell()],
-              [rRow == height + 1 && rCol == 0, Cell()],
-              [rRow == height + 1, Cell(' ', {bgColor: shadowColor})],
-              [rCol == width + 1, Cell(' ', {bgColor: shadowColor})],
+              [rRow == 0 && rCol == width + 1, () => Cell()],
+              [rRow == height + 1 && rCol == 0, () => Cell()],
+              [rRow == height + 1, () => Cell(' ', { bgColor: shadowColor })],
+              [rCol == width + 1, () => Cell(' ', { bgColor: shadowColor })],
 
-              [true, Cell(cell.char, { fgColor: cell.fgColor, bgColor })]
-            ].find(([cond, ..._]) => cond)[1]
+              [true, () => Cell(cell.char, { fgColor: cell.fgColor, bgColor })]
+            ])
           }))
         return this
       }
