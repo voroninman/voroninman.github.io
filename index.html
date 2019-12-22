@@ -9,7 +9,7 @@
 
   <link rel="manifest" href="site.webmanifest">
   <link rel="apple-touch-icon" href="icon.png">
-  <!-- Place favicon.ico in the root directory -->
+  <!-- TODO: Place favicon.ico in the root directory -->
 
   <meta name="theme-color" content="#fafafa">
   <style>
@@ -34,7 +34,7 @@
       color: green;
       position: absolute;
       font-size: 1rem;
-      letter-spacing: 0.395px; // TODO: Explain magic number.
+      letter-spacing: 0.395px; /* TODO: Explain magic number. */
     }
   </style>
 </head>
@@ -113,7 +113,6 @@
       Math.floor(y / cellHeight)
     ]
 
-
     const memo = (f) => {
       var cache = {}
       return (...args) => {
@@ -143,9 +142,7 @@
 
     const ifthen = (pairs) => pairs.find(_ => _[0])[1]()
 
-
-
-    const Grid = window.Grid2 = (cols, rows) => ({
+    const Grid = (cols, rows) => ({
 
       grid: Array(rows).fill().map(_ => Array(cols).fill().map(_ => Cell())),
 
@@ -235,7 +232,7 @@
           bgColor: 'darkgray',
           borderColor: 'black',
           titleColor: 'darkred',
-          shadowColor: 'blue'
+          shadowColor: 'black'
         })
         .cursor(cursorCol, cursorRow)
         .grid
