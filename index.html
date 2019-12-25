@@ -154,7 +154,20 @@
         return this
       },
 
-      cursor(row, col) {
+      button(bRow, bCol, text) {
+        this.rect(bRow, bCol, text.length + 3, 2, {title: '', bgColor: 'darkred', borderColor: 'gray'})
+        this.grid = this.grid.map((cells, row) =>
+          cells.map((cell, col) =>
+            ifthen([
+              [row == bRow + 1 && col >= bCol + 2 && col <= bCol + 1 + text.length,
+                () => Cell(text.slice(col - bCol - 2, col - bCol - 1), { fgColor: 'darkgray', bgColor: 'darkred' })],
+              [true, () => cell]
+            ])))
+
+        return this
+      },
+
+      cursor(cursorRow, cursorCol) {
         this.grid = this.grid.map((cells, row) => cells.map((cell, col) =>
           col == cursorCol && row == cursorRow ?
             Cell(cell.char, {
@@ -174,9 +187,9 @@
             const borderOptions = { bgColor, fgColor: borderColor }
             return ifthen([
               // Title
-              [title && rRow == 0 && rCol == titleFirstCharCol - 2, 
+              [title && rRow == 0 && rCol == titleFirstCharCol - 2,
                 () => Cell('┤', borderOptions)],
-              [title && rRow == 0 && rCol == titleFirstCharCol + title.length + 1, 
+              [title && rRow == 0 && rCol == titleFirstCharCol + title.length + 1,
                 () => Cell('├', borderOptions)],
               [title && rRow == 0
                 && rCol >= titleFirstCharCol - 1
@@ -200,8 +213,8 @@
               [(rCol == 0 || rCol == width) && rRow < height, () => Cell('│', borderOptions)],
 
               // Shadow
-              [rRow == 0 && rCol == width + 1, () => Cell()],
-              [rRow == height + 1 && rCol == 0, () => Cell()],
+              [rRow == 0 && rCol == width + 1, () => cell],
+              [rRow == height + 1 && rCol == 0, () => cell],
               [rRow == height + 1, () => Cell(' ', { bgColor: shadowColor })],
               [rCol == width + 1, () => Cell(' ', { bgColor: shadowColor })],
 
@@ -234,7 +247,10 @@
           titleColor: 'darkred',
           shadowColor: 'black'
         })
-        .cursor(cursorCol, cursorRow)
+        .button(rectY + rectHeight - 4, Math.floor(rectWidth / 2) - 17 + rectX + 2, 'CV')
+        .button(rectY + rectHeight - 4, Math.floor(rectWidth / 2) - 17 + rectX + 10, 'Github')
+        .button(rectY + rectHeight - 4, Math.floor(rectWidth / 2) - 17 + rectX + 22, 'Medium')
+        .cursor(cursorRow, cursorCol)
         .grid
 
       root.innerHTML = gridHTML(grid, cellWidth, cellHeight)
