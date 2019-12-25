@@ -46,7 +46,7 @@
       char,
       fgColor,
       bgColor,
-      equals: (other) => char == other.char && fgColor == other.fgColor && bgColor == other.bgColor,
+      equals: (other) => char.replace(/\w+/g, '*') == other.char.replace(/\w+/g, '*') && fgColor == other.fgColor && bgColor == other.bgColor,
       isTransperent: () => bgColor == 'blue' && !char.replace(/\s+/g, ''),
       includes: (other) => other.equals(Cell(char.slice(-1)[0], { fgColor, bgColor }))
     })
