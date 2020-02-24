@@ -253,6 +253,7 @@
         .button(rectY + rectHeight - 4, Math.floor(rectWidth / 2) - 17 + rectX + 2, 'CV')
         .button(rectY + rectHeight - 4, Math.floor(rectWidth / 2) - 17 + rectX + 10, 'Github')
         .button(rectY + rectHeight - 4, Math.floor(rectWidth / 2) - 17 + rectX + 22, 'Medium')
+        .text(`Row: ${cursorRow === undefined ? '-' : cursorRow} Column: ${cursorCol === undefined ? '-' : cursorCol}`, rows - 1, 0)
         .cursor(cursorRow, cursorCol)
         .grid
 
