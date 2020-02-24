@@ -129,7 +129,12 @@
       d = document.createElement("div");
       d.style.color = name;
       document.body.appendChild(d)
-      const rgb = window.getComputedStyle(d).color.split(/\)|,|\(/).slice(1, 4).map(_ => parseInt(_, 10))
+      const rgb = window
+        .getComputedStyle(d)
+        .color
+        .split(/\)|,|\(/)
+        .slice(1, 4)
+        .map(_ => parseInt(_, 10))
       d.remove()
       const invertedRgb = [255 - rgb[0], 255 - rgb[1], 255 - rgb[2]]
       return '#' + invertedRgb
