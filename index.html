@@ -147,6 +147,8 @@
 
     const Grid = (cols, rows) => ({
 
+      _buttons: [],
+
       grid: Array(rows).fill().map(_ => Array(cols).fill().map(_ => Cell())),
 
       text(chars, firstCharRow, firstCharCol) {
@@ -157,7 +159,7 @@
         return this
       },
 
-      button(bRow, bCol, text) {
+      button(bRow, bCol, text, onClick) {
         this.rect(bRow, bCol, text.length + 3, 2, {title: '', bgColor: 'darkred', borderColor: 'gray'})
         this.grid = this.grid.map((cells, row) =>
           cells.map((cell, col) =>
@@ -166,18 +168,38 @@
                 () => Cell(text.slice(col - bCol - 2, col - bCol - 1), { fgColor: 'darkgray', bgColor: 'darkred' })],
               [true, () => cell]
             ])))
+          this._buttons.push({
+            leftTop: {row: bRow, col: bCol},
+            rightBottom: {row: bRow + 2, col: bCol + text.length + 3},
+            onClick,
+          })
 
         return this
       },
 
       cursor(cursorRow, cursorCol) {
-        this.grid = this.grid.map((cells, row) => cells.map((cell, col) =>
+        overButton = this._buttons.find((b) => cursorRow >= b.leftTop.row && cursorRow <= b.rightBottom.row && cursorCol >= b.leftTop.col && cursorCol <= b.rightBottom.col)
+        console.log('overButton', overButton)
+        const invertCellColors = (cell, row, col) =>
           col == cursorCol && row == cursorRow ?
             Cell(cell.char, {
               fgColor: colorToInvertedHex(cell.fgColor),
               bgColor: colorToInvertedHex(cell.bgColor)
             }) :
-            cell))
+            cell
+        const overButtonHover = (cell, row, col) =>
+          overButton && row >= overButton.leftTop.row && row <= overButton.rightBottom.row && col >= overButton.leftTop.col && col <= overButton.rightBottom.col ?
+            Cell(cell.char, {
+              fgColor: colorToInvertedHex(cell.fgColor),
+              bgColor: colorToInvertedHex(cell.bgColor)
+            }) :
+            cell
+        this.grid = this.grid.map(
+          (cells, row) =>
+            cells
+              .map((cell, col) => invertCellColors(cell, row, col))
+              .map((cell, col) => overButtonHover(cell, row, col))
+        )
         return this
       },
 
