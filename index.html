@@ -95,17 +95,15 @@
         cells.reduce(rowReducer, []).map((cell, col) =>
           !cell || cell.isTransperent() ?
             '' :
-            [
-              `<div class="cell" style="`,
-              `background-color: ${cell.bgColor};`,
-              `color: ${cell.fgColor};`,
-              `top: ${cellHeight * row}px;`,
-              `left: ${cellWidth * col}px;`,
-              cell.char.length > 1 ? `width: ${cellWidth * cell.char.length}px;` : '',
-              `">`,
-              `${cell.char}`,
-              `</div>`,
-            ].join('')
+            `<div class="cell" style="
+              background-color: ${cell.bgColor};
+              color: ${cell.fgColor};
+              top: ${cellHeight * row}px;
+              left: ${cellWidth * col}px;
+              ${cell.char.length > 1 ? `width: ${cellWidth * cell.char.length}px` : ''}
+            ">
+              ${cell.char}
+            </div>`
         )).map(_ => _.join('')).join('')
 
     const mouseXYToColRow = (x, y, cellWidth, cellHeight) => [
