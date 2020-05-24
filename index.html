@@ -177,9 +177,8 @@
         return this
       },
 
-      cursor(cursorRow, cursorCol) {
+      cursor(cursorRow, cursorCol, pressed) {
         overButton = this._buttons.find((b) => cursorRow >= b.leftTop.row && cursorRow <= b.rightBottom.row && cursorCol >= b.leftTop.col && cursorCol <= b.rightBottom.col)
-        console.log('overButton', overButton)
         const invertCellColors = (cell, row, col) =>
           col == cursorCol && row == cursorRow ?
             Cell(cell.char, {
@@ -253,6 +252,7 @@
     const [cellWidth, cellHeight] = getCellSize()
     setCellSize(cellWidth, cellHeight)
     let cursorCol, cursorRow
+    let pressed = false
     const root = document.getElementsByClassName('grid')[0]
     const render = () => {
       const [cols, rows] = [
@@ -276,7 +276,7 @@
         .button(rectY + rectHeight - 4, Math.floor(rectWidth / 2) - 17 + rectX + 10, 'Github')
         .button(rectY + rectHeight - 4, Math.floor(rectWidth / 2) - 17 + rectX + 22, 'Medium')
         .text(`Row: ${cursorRow === undefined ? '-' : cursorRow} Column: ${cursorCol === undefined ? '-' : cursorCol}`, rows - 1, 1)
-        .cursor(cursorRow, cursorCol)
+        .cursor(cursorRow, cursorCol, pressed)
         .grid
 
       root.innerHTML = gridHTML(grid, cellWidth, cellHeight)
@@ -285,11 +285,19 @@
     root.addEventListener('mousemove', e => {
       [cursorCol, cursorRow] = mouseXYToColRow(e.clientX, e.clientY, cellWidth, cellHeight)
       render()
-    });
+    })
 
     window.addEventListener('resize', e => {
       render()
-    });
+    })
+
+    document.body.onmousedown = e => {
+      pressed = true
+    }
+
+    document.body.onmouseup = e => {
+      pressed = false
+    }
 
     render()
 
